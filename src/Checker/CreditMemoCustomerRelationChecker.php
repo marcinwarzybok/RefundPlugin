@@ -20,26 +20,19 @@ final class CreditMemoCustomerRelationChecker implements CreditMemoCustomerRelat
     /** @var RepositoryInterface */
     private $creditMemoRepository;
 
-    /** @var OrderRepositoryInterface */
-    private $orderRepository;
-
     public function __construct(
         CustomerContextInterface $customerContext,
-        RepositoryInterface $creditMemoRepository,
-        OrderRepositoryInterface $orderRepository
+        RepositoryInterface $creditMemoRepository
     ) {
         $this->customerContext = $customerContext;
         $this->creditMemoRepository = $creditMemoRepository;
-        $this->orderRepository = $orderRepository;
     }
 
     public function check(string $creditMemoId): void
     {
         /** @var CreditMemoInterface $creditMemo */
         $creditMemo = $this->creditMemoRepository->find($creditMemoId);
-
-        /** @var OrderInterface $order */
-        $order = $this->orderRepository->findOneByNumber($creditMemo->getOrderNumber());
+        $order = $creditMemo->getOrder();
 
         /** @var CustomerInterface $orderCustomer */
         $orderCustomer = $order->getCustomer();

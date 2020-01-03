@@ -54,18 +54,12 @@ final class CreditMemoGenerator implements CreditMemoGeneratorInterface
     }
 
     public function generate(
-        string $orderNumber,
+        OrderInterface $order,
         int $total,
         array $units,
         array $shipments,
         string $comment
     ): CreditMemoInterface {
-        /** @var OrderInterface|null $order */
-        $order = $this->orderRepository->findOneByNumber($orderNumber);
-        if ($order === null) {
-            throw OrderNotFound::withNumber($orderNumber);
-        }
-
         /** @var ChannelInterface $channel */
         $channel = $order->getChannel();
 
@@ -90,7 +84,7 @@ final class CreditMemoGenerator implements CreditMemoGeneratorInterface
         return new CreditMemo(
             $this->uuidCreditMemoIdentifierGenerator->generate(),
             $this->creditMemoNumberGenerator->generate(),
-            $orderNumber,
+            $order,
             $total,
             $order->getCurrencyCode(),
             $order->getLocaleCode(),

@@ -24,16 +24,11 @@ use Sylius\RefundPlugin\Entity\ShopBillingDataInterface;
 use Sylius\RefundPlugin\Factory\CreditMemoFactoryInterface;
 use Sylius\RefundPlugin\Factory\CustomerBillingDataFactoryInterface;
 use Sylius\RefundPlugin\Factory\ShopBillingDataFactoryInterface;
-use Sylius\RefundPlugin\Model\OrderItemUnitRefund;
-use Sylius\RefundPlugin\Model\ShipmentRefund;
-use Sylius\RefundPlugin\Model\UnitRefundInterface;
 use Webmozart\Assert\Assert;
 
 final class CreditMemoGenerator implements CreditMemoGeneratorInterface
 {
     private LineItemsConverterInterface $lineItemsConverter;
-
-    private LineItemsConverterInterface $shipmentLineItemsConverter;
 
     private TaxItemsGeneratorInterface $taxItemsGenerator;
 
@@ -45,14 +40,12 @@ final class CreditMemoGenerator implements CreditMemoGeneratorInterface
 
     public function __construct(
         LineItemsConverterInterface $lineItemsConverter,
-        LineItemsConverterInterface $shipmentLineItemsConverter,
         TaxItemsGeneratorInterface $taxItemsGenerator,
         CreditMemoFactoryInterface $creditMemoFactory,
         CustomerBillingDataFactoryInterface $customerBillingDataFactory,
         ShopBillingDataFactoryInterface $shopBillingDataFactory
     ) {
         $this->lineItemsConverter = $lineItemsConverter;
-        $this->shipmentLineItemsConverter = $shipmentLineItemsConverter;
         $this->taxItemsGenerator = $taxItemsGenerator;
         $this->creditMemoFactory = $creditMemoFactory;
         $this->customerBillingDataFactory = $customerBillingDataFactory;
@@ -73,10 +66,7 @@ final class CreditMemoGenerator implements CreditMemoGeneratorInterface
         $billingAddress = $order->getBillingAddress();
         Assert::notNull($billingAddress);
 
-        $lineItems = array_merge(
-            $this->lineItemsConverter->convert($units),
-            $this->shipmentLineItemsConverter->convert($units)
-        );
+        $lineItems = $this->lineItemsConverter->convert($units);
 
         return $this->creditMemoFactory->createWithData(
             $order,

@@ -73,16 +73,9 @@ final class CreditMemoGenerator implements CreditMemoGeneratorInterface
         $billingAddress = $order->getBillingAddress();
         Assert::notNull($billingAddress);
 
-        $orderItemUnitRefunds = array_values(array_filter($units, function (UnitRefundInterface $unitRefund): bool {
-            return $unitRefund instanceof OrderItemUnitRefund;
-        }));
-        $shipmentRefunds = array_values(array_filter($units, function (UnitRefundInterface $unitRefund): bool {
-            return $unitRefund instanceof ShipmentRefund;
-        }));
-
         $lineItems = array_merge(
-            $this->lineItemsConverter->convert($orderItemUnitRefunds),
-            $this->shipmentLineItemsConverter->convert($shipmentRefunds)
+            $this->lineItemsConverter->convert($units),
+            $this->shipmentLineItemsConverter->convert($units)
         );
 
         return $this->creditMemoFactory->createWithData(

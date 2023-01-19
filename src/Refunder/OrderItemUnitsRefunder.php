@@ -15,7 +15,7 @@ namespace Sylius\RefundPlugin\Refunder;
 
 use Sylius\RefundPlugin\Creator\RefundCreatorInterface;
 use Sylius\RefundPlugin\Event\UnitRefunded;
-use Sylius\RefundPlugin\Model\RefundType;
+use Sylius\RefundPlugin\Model\OrderItemUnitRefund;
 use Sylius\RefundPlugin\Model\UnitRefundInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -35,6 +35,8 @@ final class OrderItemUnitsRefunder implements RefunderInterface
 
     public function refundFromOrder(array $units, string $orderNumber): int
     {
+        $units = $this->filterOrderItemUnitRefunds($units);
+
         $refundedTotal = 0;
 
         /** @var UnitRefundInterface $unit */
@@ -43,7 +45,7 @@ final class OrderItemUnitsRefunder implements RefunderInterface
                 $orderNumber,
                 $unit->id(),
                 $unit->total(),
-                RefundType::orderItemUnit()
+                $unit->type()
             );
 
             $refundedTotal += $unit->total();
@@ -52,5 +54,10 @@ final class OrderItemUnitsRefunder implements RefunderInterface
         }
 
         return $refundedTotal;
+    }
+
+    private function filterOrderItemUnitRefunds(array $units): array
+    {
+        return array_filter($units, fn (UnitRefundInterface $unitRefund) => $unitRefund instanceof OrderItemUnitRefund);
     }
 }

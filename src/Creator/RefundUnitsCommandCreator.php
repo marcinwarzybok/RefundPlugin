@@ -14,40 +14,24 @@ declare(strict_types=1);
 namespace Sylius\RefundPlugin\Creator;
 
 use Sylius\RefundPlugin\Command\RefundUnits;
-use Sylius\RefundPlugin\Converter\RefundUnitsConverterInterface;
+use Sylius\RefundPlugin\Converter\RequestToRefundUnitsConverterInterface;
 use Sylius\RefundPlugin\Exception\InvalidRefundAmount;
-use Sylius\RefundPlugin\Model\OrderItemUnitRefund;
-use Sylius\RefundPlugin\Model\RefundType;
-use Sylius\RefundPlugin\Model\ShipmentRefund;
 use Symfony\Component\HttpFoundation\Request;
 use Webmozart\Assert\Assert;
 
 final class RefundUnitsCommandCreator implements RefundUnitsCommandCreatorInterface
 {
-    private RefundUnitsConverterInterface $refundUnitsConverter;
-
-    public function __construct(RefundUnitsConverterInterface $refundUnitsConverter)
+    public function __construct(private RequestToRefundUnitsConverterInterface $requestToRefundUnitsConverter)
     {
-        $this->refundUnitsConverter = $refundUnitsConverter;
     }
 
     public function fromRequest(Request $request): RefundUnits
     {
         Assert::true($request->attributes->has('orderNumber'), 'Refunded order number not provided');
 
-        $units = $this->refundUnitsConverter->convert(
-            $request->request->has('sylius_refund_units') ? $request->request->all()['sylius_refund_units'] : [],
-            RefundType::orderItemUnit(),
-            OrderItemUnitRefund::class
-        );
+        $units = $this->requestToRefundUnitsConverter->convert($request);
 
-        $shipments = $this->refundUnitsConverter->convert(
-            $request->request->has('sylius_refund_shipments') ? $request->request->all()['sylius_refund_shipments'] : [],
-            RefundType::shipment(),
-            ShipmentRefund::class
-        );
-
-        if (count($units) === 0 && count($shipments) === 0) {
+        if (count($units) === 0) {
             throw InvalidRefundAmount::withValidationConstraint('sylius_refund.at_least_one_unit_should_be_selected_to_refund');
         }
 
@@ -57,7 +41,6 @@ final class RefundUnitsCommandCreator implements RefundUnitsCommandCreatorInterf
         return new RefundUnits(
             $request->attributes->get('orderNumber'),
             $units,
-            $shipments,
             (int) $request->request->get('sylius_refund_payment_method'),
             $comment
         );

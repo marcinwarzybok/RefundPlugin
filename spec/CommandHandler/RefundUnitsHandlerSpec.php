@@ -37,8 +37,7 @@ final class RefundUnitsHandlerSpec extends ObjectBehavior
         RefundUnitsCommandValidatorInterface $refundUnitsCommandValidator
     ): void {
         $this->beConstructedWith(
-            $orderItemUnitsRefunder,
-            $orderShipmentsRefunder,
+            [$orderItemUnitsRefunder, $orderShipmentsRefunder],
             $eventBus,
             $orderRepository,
             $refundUnitsCommandValidator
@@ -53,11 +52,15 @@ final class RefundUnitsHandlerSpec extends ObjectBehavior
         RefundUnitsCommandValidatorInterface $refundUnitsCommandValidator,
         OrderInterface $order
     ): void {
-        $unitRefunds = [new OrderItemUnitRefund(1, 3000), new OrderItemUnitRefund(3, 4000)];
-        $shipmentRefunds = [new ShipmentRefund(3, 500), new ShipmentRefund(4, 1000)];
+        $unitRefunds = [
+            new OrderItemUnitRefund(1, 3000),
+            new OrderItemUnitRefund(3, 4000),
+            new ShipmentRefund(3, 500),
+            new ShipmentRefund(4, 1000)
+        ];
 
         $orderItemUnitsRefunder->refundFromOrder($unitRefunds, '000222')->willReturn(3000);
-        $orderShipmentsRefunder->refundFromOrder($shipmentRefunds, '000222')->willReturn(4000);
+        $orderShipmentsRefunder->refundFromOrder($unitRefunds, '000222')->willReturn(4000);
 
         $orderRepository->findOneByNumber('000222')->willReturn($order);
         $order->getCurrencyCode()->willReturn('USD');
@@ -66,7 +69,7 @@ final class RefundUnitsHandlerSpec extends ObjectBehavior
 
         $event = new UnitsRefunded(
             '000222',
-            [new OrderItemUnitRefund(1, 3000), new OrderItemUnitRefund(3, 4000), new ShipmentRefund(3, 500), new ShipmentRefund(4, 1000)],
+            $unitRefunds,
             1,
             7000,
             'USD',
@@ -74,7 +77,7 @@ final class RefundUnitsHandlerSpec extends ObjectBehavior
         );
         $eventBus->dispatch($event)->willReturn(new Envelope($event))->shouldBeCalled();
 
-        $this(new RefundUnits('000222', $unitRefunds, $shipmentRefunds, 1, 'Comment'));
+        $this(new RefundUnits('000222', $unitRefunds, 1, 'Comment'));
     }
 
     function it_throws_an_exception_if_order_is_not_available_for_refund(
@@ -82,8 +85,7 @@ final class RefundUnitsHandlerSpec extends ObjectBehavior
     ): void {
         $refundUnitsCommand = new RefundUnits(
             '000222',
-            [new OrderItemUnitRefund(1, 3000), new OrderItemUnitRefund(3, 4000)],
-            [new ShipmentRefund(3, 500), new ShipmentRefund(4, 1000)],
+            [new OrderItemUnitRefund(1, 3000), new OrderItemUnitRefund(3, 4000), new ShipmentRefund(3, 500), new ShipmentRefund(4, 1000)],
             1,
             'Comment'
         );

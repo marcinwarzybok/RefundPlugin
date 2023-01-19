@@ -17,6 +17,7 @@ use Sylius\RefundPlugin\Creator\RefundCreatorInterface;
 use Sylius\RefundPlugin\Event\ShipmentRefunded;
 use Sylius\RefundPlugin\Model\RefundType;
 use Sylius\RefundPlugin\Model\ShipmentRefund;
+use Sylius\RefundPlugin\Model\UnitRefundInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 final class OrderShipmentsRefunder implements RefunderInterface
@@ -33,6 +34,8 @@ final class OrderShipmentsRefunder implements RefunderInterface
 
     public function refundFromOrder(array $units, string $orderNumber): int
     {
+        $units = $this->filterShipmentRefunds($units);
+
         $refundedTotal = 0;
 
         /** @var ShipmentRefund $shipmentUnit */
@@ -50,5 +53,10 @@ final class OrderShipmentsRefunder implements RefunderInterface
         }
 
         return $refundedTotal;
+    }
+
+    private function filterShipmentRefunds(array $units): array
+    {
+        return array_filter($units, fn (UnitRefundInterface $unitRefund) => $unitRefund instanceof ShipmentRefund);
     }
 }

@@ -19,6 +19,7 @@ use Sylius\Component\Order\Model\AdjustableInterface;
 use Sylius\Component\Resource\Repository\RepositoryInterface;
 use Sylius\RefundPlugin\Entity\RefundInterface;
 use Sylius\RefundPlugin\Model\RefundTypeInterface;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Webmozart\Assert\Assert;
 
 final class RemainingTotalProvider implements RemainingTotalProviderInterface
@@ -33,6 +34,7 @@ final class RemainingTotalProvider implements RemainingTotalProviderInterface
         RepositoryInterface $orderItemUnitRepository,
         RepositoryInterface $adjustmentRepository,
         RepositoryInterface $refundRepository,
+        private ServiceLocator $totalProviderRegistry,
     ) {
         $this->orderItemUnitRepository = $orderItemUnitRepository;
         $this->adjustmentRepository = $adjustmentRepository;
@@ -41,43 +43,15 @@ final class RemainingTotalProvider implements RemainingTotalProviderInterface
 
     public function getTotalLeftToRefund(int $id, RefundTypeInterface $type): int
     {
-        $unitTotal = $this->getRefundUnitTotal($id, $type);
-        $refunds = $this->refundRepository->findBy(['refundedUnitId' => $id, 'type' => $type]);
+        $refundUnitTotalProvider = $this->totalProviderRegistry->get($type->getValue());
 
-        if (count($refunds) === 0) {
-            return $unitTotal;
-        }
-
-        $refundedTotal = 0;
-        /** @var RefundInterface $refund */
-        foreach ($refunds as $refund) {
-            $refundedTotal += $refund->getAmount();
-        }
-
-        return $unitTotal - $refundedTotal;
+        return $refundUnitTotalProvider->getRefundUnitTotal($id);
     }
 
     private function getRefundUnitTotal(int $id, RefundTypeInterface $refundType): int
     {
-        if ($refundType->getValue() === RefundTypeInterface::ORDER_ITEM_UNIT) {
-            /** @var OrderItemUnitInterface $orderItemUnit */
-            $orderItemUnit = $this->orderItemUnitRepository->find($id);
-            Assert::notNull($orderItemUnit);
+        $refundUnitTotalProvider = $this->totalProviderRegistry->get($refundType->getValue());
 
-            return $orderItemUnit->getTotal();
-        }
-
-        /** @var AdjustmentInterface $shippingAdjustment */
-        $shippingAdjustment = $this->adjustmentRepository->findOneBy([
-            'id' => $id,
-            'type' => AdjustmentInterface::SHIPPING_ADJUSTMENT,
-        ]);
-        Assert::notNull($shippingAdjustment);
-
-        $shipment = $shippingAdjustment->getShipment();
-        Assert::notNull($shipment);
-        Assert::isInstanceOf($shipment, AdjustableInterface::class);
-
-        return $shipment->getAdjustmentsTotal();
+        return $refundUnitTotalProvider->getRefundUnitTotal($id);
     }
 }
